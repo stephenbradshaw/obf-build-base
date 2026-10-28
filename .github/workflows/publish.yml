@@ -1,0 +1,111 @@
+name: publish
+
+# Publishes the multi-arch compiler base image to ghcr. Each architecture
+# builds natively on its own runner (the obfuscation toolchain layers are
+# multi-GB; building them under QEMU emulation is impractically slow), then
+# the per-arch images are merged into a manifest list.
+#
+# Tags produced: `latest` always, plus the git tag name on tag pushes and
+# the short SHA on branch pushes/dispatches. The digest of the merged
+# manifest list is what agent Dockerfiles should pin.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: true
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.platform }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine tags
+        id: tags
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME}"
+          else
+            version="sha-${GITHUB_SHA::7}"
+          fi
+          {
+            echo "tags=${IMAGE}:latest,${IMAGE}:${version}"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          IMAGE: ${{ env.IMAGE }}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t \(.)") | join(" ")' <<< "$TAGS") \
+            $(printf "$IMAGE@sha256:%s " *)
+
+      - name: Inspect image
+        run: docker buildx imagetools inspect "$IMAGE:latest"
+        env:
+          IMAGE: ${{ env.IMAGE }}
