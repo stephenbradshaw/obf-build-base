@@ -98,9 +98,7 @@ jobs:
           else
             version="sha-${GITHUB_SHA::7}"
           fi
-          {
-            echo "tags=${IMAGE}:latest,${IMAGE}:${version}"
-          } >> "$GITHUB_OUTPUT"
+          echo "tags=$(printf '["%s", "%s"]' "$IMAGE:latest" "$IMAGE:$version")" >> "$GITHUB_OUTPUT"
         env:
           IMAGE: ${{ env.IMAGE }}
 
