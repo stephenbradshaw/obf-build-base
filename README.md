@@ -30,7 +30,7 @@ docker buildx imagetools inspect ghcr.io/stephenbradshaw/obf-build-base:latest \
 
 | Component          | Version            |
 |--------------------|--------------------|
-| Ubuntu base        | 24.04              |
+| Ubuntu base        | 26.04              |
 | Rust (rustup)      | 1.99.1             |
 | cargo-zigbuild/zig | 0.24.0             |
 | rcodesign          | 0.29.0             |
