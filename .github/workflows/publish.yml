@@ -107,7 +107,7 @@ jobs:
         env:
           TAGS: ${{ steps.tags.outputs.tags }}
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t \(.)") | join(" ")' <<< "$TAGS") \
+          docker buildx imagetools create $(jq -cr 'map("-t \(.)") | join(" ")' <<< "$TAGS") \
             $(printf "$IMAGE@sha256:%s " *)
 
       - name: Inspect image
