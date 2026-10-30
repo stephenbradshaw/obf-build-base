@@ -95,7 +95,7 @@ RUN ARCH=$(uname -m) && \
 # plain release URL - no auth. OBF_REPO_BASE can be pointed at a LAN mirror
 # (e.g. http://llmproxy/llvm-project/releases/download) instead.
 ARG OBF_REPO_BASE=https://github.com/stephenbradshaw/llvm-project/releases/download
-ARG OBF_TAG=v23.1.3.10
+ARG OBF_TAG=v23.1.3.14
 RUN ARCH=$(uname -m) && \
     case "$ARCH" in \
         x86_64) OBF_PLATFORM=linux-amd64 ;; \

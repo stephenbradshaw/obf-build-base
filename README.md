@@ -34,7 +34,7 @@ docker buildx imagetools inspect ghcr.io/stephenbradshaw/obf-build-base:latest \
 | Rust (rustup)      | 1.99.1             |
 | cargo-zigbuild/zig | 0.24.0             |
 | rcodesign          | 0.29.0             |
-| obf Rust/LLVM      | `OBF_TAG` (v23.1.3.10) |
+| obf Rust/LLVM      | `OBF_TAG` (v23.1.3.14) |
 
 apt package versions are not pinned and drift between base rebuilds; C/C++
 dependencies compiled through zig are unaffected. Base rebuilds produce a
